@@ -382,11 +382,17 @@ function loadData() {
 
   const url = CSV_URL + '&t=' + Date.now();
 
-  Papa.parse(url, {
-    download: true,
-    header: true,
-    skipEmptyLines: true,
-    complete(results) {
+  fetch(url)
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.text();
+    })
+    .then(csvText => {
+      const results = Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true
+      });
+
       btn.disabled = false;
       btn.classList.remove('loading');
 
@@ -401,15 +407,15 @@ function loadData() {
         return;
       }
 
-      renderTable(results.fields, results.data);
+      renderTable(results.meta.fields, results.data);
       const now = new Date();
       document.getElementById('last-updated').textContent =
         '最後更新：' + now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       document.getElementById('row-count').textContent = results.data.length;
       document.getElementById('stats-bar').style.display = 'flex';
       resetCountdown();
-    },
-    error(err) {
+    })
+    .catch(err => {
       btn.disabled = false;
       btn.classList.remove('loading');
       container.innerHTML = `
@@ -419,8 +425,7 @@ function loadData() {
           <p class="state-desc">請確認試算表已設為「知道連結的人可檢視」<br>錯誤：${err.message || '未知錯誤'}</p>
         </div>`;
       document.getElementById('stats-bar').style.display = 'none';
-    }
-  });
+    });
 }
 
 function renderTable(fields, rows) {
